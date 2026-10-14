@@ -14446,6 +14446,7 @@ pub extern "C" fn watchdog_diagram() {
 
 // ── Size constants ────────────────────────────────────────────────────────────
 pub const MAX_VARS:          usize = 322;
+pub const MAX_FRAME_VARS:    usize = 32;
 pub const MAX_FUNCTIONS:     usize = 644;
 pub const MAX_CALL_STACK:    usize = 16;
 pub const MAX_LINES:         usize = 1000;
@@ -14709,16 +14710,16 @@ impl ScriptFunction {
 #[derive(Clone, Copy)]
 pub struct CallFrame {
     pub func_name:     FuncName,
-    pub saved_vars:    [Variable; MAX_VARS],
-    pub saved_indices: [u8; MAX_VARS],
+    pub saved_vars:    [Variable; MAX_FRAME_VARS],
+    pub saved_indices: [u16; MAX_FRAME_VARS],
     pub saved_count:   usize,
 }
 impl CallFrame {
     pub const fn new() -> Self {
         Self {
             func_name:     Str::new(),
-            saved_vars:    [Variable::new(); MAX_VARS],
-            saved_indices: [0u8; MAX_VARS],
+            saved_vars:    [Variable::new(); MAX_FRAME_VARS],
+            saved_indices: [0u16; MAX_FRAME_VARS],
             saved_count:   0,
         }
     }
@@ -15488,9 +15489,9 @@ fn call_function(name: &[u8], args: &[&[u8]], ctx: &mut ScriptCtx) -> i32 {
         for i in 0..MAX_VARS {
             if ctx.vars[i].used {
                 let sc = frame.saved_count;
-                if sc < MAX_VARS {
+                if sc < MAX_FRAME_VARS {
                     frame.saved_vars[sc]    = ctx.vars[i];
-                    frame.saved_indices[sc] = i as u8;
+                    frame.saved_indices[sc] = i as u16;
                     frame.saved_count += 1;
                 }
             }

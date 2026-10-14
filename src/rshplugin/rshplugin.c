@@ -81,7 +81,7 @@ static char *_itoa_local  (int n, char *buf, int bufsz);
 // ScriptCtx alone is ~178 KB.  16 plugins × 178 KB = ~2.8 MB total.
 // That is tight on a 4 MB kernel heap; trim RSH_MAX_PLUGINS if needed.
 // =============================================================================
-#define RSH_CTX_SIZE_BYTES  234496
+#define RSH_CTX_SIZE_BYTES  262144
 // Statically allocate a pool of script contexts.
 // __attribute__((aligned(64))) ensures the Rust-side atomics are happy.
 static unsigned char g_ctx_pool[RSH_MAX_PLUGINS][RSH_CTX_SIZE_BYTES]
