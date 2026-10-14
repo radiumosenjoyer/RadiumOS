@@ -76,8 +76,10 @@ int remap_pic() {
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
-    outb(0x21, 0x00);
-    outb(0xA1, 0x00);
+    /* Unmask IRQ0 (PIT) only. Keyboard is polled; leaving IRQ1 unmasked
+     * without reading port 0x60 in the ISR storms the PIC. */
+    outb(0x21, 0xFE);
+    outb(0xA1, 0xFF);
     
     return 1;
 }
