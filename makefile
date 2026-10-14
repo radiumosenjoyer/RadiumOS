@@ -286,8 +286,11 @@ init-rust: check-rust
 		printf '{\n  "llvm-target": "i686-unknown-none",\n  "data-layout": "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128",\n  "arch": "x86",\n  "target-endian": "little",\n  "target-pointer-width": 32,\n  "target-c-int-width": 32,\n  "os": "none",\n  "linker-flavor": "ld.lld",\n  "linker": "ld.lld",\n  "panic-strategy": "abort",\n  "disable-redzone": true,\n  "features": "-mmx,-sse",\n  "relocation-model": "static",\n  "code-model": "kernel"\n}\n' > i686-radiumos.json; \
 		echo "✓ Created i686-radiumos.json"; \
 	fi
-	@if [ ! -d "$(RUST_LIB_DIR)" ]; then cargo new $(RUST_LIB_DIR) --lib --name radiumos_rust; fi
-	@if [ ! -f "$(RUST_LIB_DIR)/Cargo.toml" ]; then \
+	@if [ ! -d "$(RUST_LIB_DIR)" ]; then \
+		cargo new $(RUST_LIB_DIR) --lib --name radiumos_rust; \
+		printf '[package]\nname = "radiumos_rust"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["staticlib"]\n\n[profile.release]\npanic = "abort"\nlto = true\nopt-level = 2\n' > $(RUST_LIB_DIR)/Cargo.toml; \
+		echo "✓ Created $(RUST_LIB_DIR)/Cargo.toml"; \
+	elif [ ! -f "$(RUST_LIB_DIR)/Cargo.toml" ]; then \
 		printf '[package]\nname = "radiumos_rust"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["staticlib"]\n\n[profile.release]\npanic = "abort"\nlto = true\nopt-level = 2\n' > $(RUST_LIB_DIR)/Cargo.toml; \
 		echo "✓ Created $(RUST_LIB_DIR)/Cargo.toml"; \
 	else \
