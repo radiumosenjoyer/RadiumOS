@@ -16113,7 +16113,11 @@ fn dispatch_cmd(
             rust_print(b"\n");
         }
         b"alias" => {
-            if argc >= 3 { ctx.set_var(arg!(1), val!(2)); }
+            if argc >= 3 {
+                let mut tmp = Line::new();
+                tmp.set(val!(2));
+                ctx.set_var(arg!(1), tmp.as_bytes());
+            }
         }
         b"concat" => {
             if argc >= 2 {
