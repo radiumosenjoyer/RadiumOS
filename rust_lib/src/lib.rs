@@ -15483,17 +15483,23 @@ fn call_function(name: &[u8], args: &[&[u8]], ctx: &mut ScriptCtx) -> i32 {
 
     // ── Save only in-use variable slots (compact) ─────────────────────────────
     {
+        let mut live = 0usize;
+        for i in 0..MAX_VARS {
+            if ctx.vars[i].used { live += 1; }
+        }
+        if live > MAX_FRAME_VARS {
+            rust_print(b"Error: too many live variables to save across call\n");
+            return -1;
+        }
         let frame = &mut ctx.call_stack[ctx.call_depth];
         frame.func_name.set(name);
         frame.saved_count = 0;
         for i in 0..MAX_VARS {
             if ctx.vars[i].used {
                 let sc = frame.saved_count;
-                if sc < MAX_FRAME_VARS {
-                    frame.saved_vars[sc]    = ctx.vars[i];
-                    frame.saved_indices[sc] = i as u16;
-                    frame.saved_count += 1;
-                }
+                frame.saved_vars[sc]    = ctx.vars[i];
+                frame.saved_indices[sc] = i as u16;
+                frame.saved_count += 1;
             }
         }
     }
