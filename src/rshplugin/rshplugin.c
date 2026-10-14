@@ -52,6 +52,7 @@ extern int script_map_get_ctx(const char *map_name, const char *key,
 // register_command() comes from keyboard.h.  We need the full signature here.
 extern int register_command(const char *name, const char *description,
                             void (*execute)(int, char *[]));
+extern int unregister_command(const char *name);
 
 // ── Terminal helpers ──────────────────────────────────────────────────────────
 // Provided by terminal.c / utility.c in RadiumOS.
@@ -314,11 +315,7 @@ void rsh_plugin_unload(const char *cmd_name) {
     g_plugins[slot].cmd_name[0] = '\0';
     g_plugins[slot].path[0]     = '\0';
 
-    // NOTE: keyboard.c has no unregister_command() in the current design.
-    // The entry stays in the command table but its context is zeroed, so
-    // calling it after unload will silently do nothing (find_plugin returns -1
-    // and rsh_dispatch_shim prints an error message).
-    // If you later add unregister_command(), call it here.
+    unregister_command(cmd_name);
 
     print("[rsh] unloaded plugin: ");
     print(cmd_name);
