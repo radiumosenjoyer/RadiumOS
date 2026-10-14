@@ -11922,8 +11922,15 @@ pub extern "C" fn rust_aes_encrypt(data: *mut u8, len: u32) -> i32 {
         log_banner(b"AES-128 CBC  --  ENCRYPT", 0x0E);
         tp(b"\n    Input:  ", 0x0F); tp_num(len, 0x0F); tp(b" bytes\n", 0x07);
 
-        let out_len = cbc_encrypt(data, len, AES_BUF.as_mut_ptr(), trace());
-        core::ptr::copy_nonoverlapping(AES_BUF.as_ptr(), data, out_len as usize);
+        let remainder = len % 16;
+        let total_len = len + pkcs7_pad(remainder) as u32;
+        let layout = core::alloc::Layout::from_size_align(total_len as usize, 16)
+            .unwrap_or(core::alloc::Layout::from_size_align(16, 16).unwrap());
+        let dst = alloc::alloc::alloc(layout);
+        if dst.is_null() { return -1; }
+        let out_len = cbc_encrypt(data, len, dst, trace());
+        core::ptr::copy_nonoverlapping(dst, data, out_len as usize);
+        alloc::alloc::dealloc(dst, layout);
 
         tp(b"\n    Output: ", 0x0F); tp_num(out_len, 0x0C);
         tp(b" bytes (padded to ", 0x07);
@@ -11942,8 +11949,13 @@ pub extern "C" fn rust_aes_decrypt(data: *mut u8, len: u32) -> i32 {
         log_banner(b"AES-128 CBC  --  DECRYPT", 0x0E);
         tp(b"\n    Input:  ", 0x0F); tp_num(len, 0x0F); tp(b" bytes\n", 0x07);
 
-        let out_len = cbc_decrypt(data, len, AES_BUF.as_mut_ptr(), trace());
-        core::ptr::copy_nonoverlapping(AES_BUF.as_ptr(), data, out_len as usize);
+        let layout = core::alloc::Layout::from_size_align(len as usize, 16)
+            .unwrap_or(core::alloc::Layout::from_size_align(16, 16).unwrap());
+        let dst = alloc::alloc::alloc(layout);
+        if dst.is_null() { return -1; }
+        let out_len = cbc_decrypt(data, len, dst, trace());
+        core::ptr::copy_nonoverlapping(dst, data, out_len as usize);
+        alloc::alloc::dealloc(dst, layout);
 
         tp(b"\n    Output: ", 0x0F); tp_num(out_len, 0x0A); tp(b" bytes\n", 0x07);
         out_len as i32
@@ -11975,9 +11987,14 @@ pub extern "C" fn rust_aes_encrypt_file(filename: *const u8) -> i32 {
             return -1; 
         }
 
-        avfs_read_file(filename, buf, sz as u32, 0);
+        let plain = simple_malloc(sz as u32);
+        if plain.is_null() {
+            tp(b"  [ERROR] malloc failed\n", 0x0C);
+            return -1;
+        }
+        avfs_read_file(filename, plain, sz as u32, 0);
+        core::ptr::copy_nonoverlapping(plain, buf, sz as usize);
 
-        // 2. Encrypt the data in the buffer
         let enc_len = rust_aes_encrypt(buf, sz as u32);
 
         if enc_len <= 0 {
@@ -11985,27 +12002,19 @@ pub extern "C" fn rust_aes_encrypt_file(filename: *const u8) -> i32 {
             return -1;
         }
 
-        // 3. Define AVFS functions
         extern "C" {
             fn avfs_remove_file(filename: *const u8) -> i32;
             fn avfs_create_file(filename: *const u8, size: u32) -> i32;
         }
-        
-        // 4. Delete the old file
-        tp(b"    [INFO] Deleting original file...\n", 0x0E);
-        avfs_remove_file(filename); 
 
-        // 5. Create the new file with the exact padded size
-        // Since avfs_write_file doesn't resize, we must allocate the full size here.
-        tp(b"    [INFO] Creating new file (size=", 0x0E); tp_num(enc_len as u32, 0x0E); tp(b")...\n", 0x0E);
-        
+        avfs_remove_file(filename);
         if avfs_create_file(filename, enc_len as u32) != 0 {
-            tp(b"  [ERROR] Failed to create new file. Disk full?\n", 0x0C);
+            tp(b"  [ERROR] Failed to create new file; restoring plaintext.\n", 0x0C);
+            if avfs_create_file(filename, sz as u32) == 0 {
+                avfs_write_file(filename, plain, sz as u32, 0);
+            }
             return -1;
         }
-
-        // 6. Write the encrypted data
-        tp(b"    [INFO] Writing encrypted data...\n", 0x0E);
         avfs_write_file(filename, buf, enc_len as u32, 0);
 
         tp(b"    Written ", 0x0A); tp_num(enc_len as u32, 0x0A);
