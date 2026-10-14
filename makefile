@@ -287,7 +287,12 @@ init-rust: check-rust
 		echo "✓ Created i686-radiumos.json"; \
 	fi
 	@if [ ! -d "$(RUST_LIB_DIR)" ]; then cargo new $(RUST_LIB_DIR) --lib --name radiumos_rust; fi
-	@printf '[package]\nname = "radiumos_rust"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["staticlib"]\n\n[profile.release]\npanic = "abort"\nlto = true\nopt-level = 2\n' > $(RUST_LIB_DIR)/Cargo.toml
+	@if [ ! -f "$(RUST_LIB_DIR)/Cargo.toml" ]; then \
+		printf '[package]\nname = "radiumos_rust"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["staticlib"]\n\n[profile.release]\npanic = "abort"\nlto = true\nopt-level = 2\n' > $(RUST_LIB_DIR)/Cargo.toml; \
+		echo "✓ Created $(RUST_LIB_DIR)/Cargo.toml"; \
+	else \
+		echo "✓ Kept existing $(RUST_LIB_DIR)/Cargo.toml"; \
+	fi
 	@echo "✓ Rust support initialized!"
 
 .PHONY: info
