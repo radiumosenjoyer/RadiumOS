@@ -16112,6 +16112,38 @@ fn dispatch_cmd(
             while i < argc { if i > 1 { rust_print(b" "); } rust_print(val!(i)); i += 1; }
             rust_print(b"\n");
         }
+        b"alias" => {
+            if argc >= 3 { ctx.set_var(arg!(1), val!(2)); }
+        }
+        b"concat" => {
+            if argc >= 2 {
+                let mut out = Line::new();
+                let mut i = 2;
+                while i < argc {
+                    for &b in val!(i) { out.push(b); }
+                    i += 1;
+                }
+                ctx.set_var(arg!(1), out.as_bytes());
+            }
+        }
+        b"mem_alloc" => {
+            if argc >= 3 {
+                let n = ival!(1);
+                let p = unsafe { simple_malloc(n as u32) };
+                let mut buf = [0u8; 24];
+                ctx.set_var(arg!(2), int_to_str(p as i64, &mut buf));
+            }
+        }
+        b"mem_free" => {}
+        b"touch" => {
+            if argc >= 2 {
+                let mut path = [0u8; 256];
+                let n = arg!(1);
+                let len = n.len().min(255);
+                path[..len].copy_from_slice(&n[..len]);
+                unsafe { avfs_create_file(path.as_ptr(), 0); }
+            }
+        }
         b"print" => {
             let mut i = 1;
             while i < argc { rust_print(val!(i)); i += 1; }
@@ -17006,7 +17038,7 @@ fn dispatch_cmd(
             let sub=arg!(1);
             if sub==b"set" && argc>=4{
                 let v=arg!(3);
-                ctx.set_var(arg!(2), if v==b"TRUE"||v==b"yes"{b"1"}else{b"0"});
+                ctx.set_var(arg!(2), if v==b"TRUE"||v==b"true"||v==b"yes"||v==b"1"{b"1"}else{b"0"});
             } else if sub==b"toggle" && argc>=3{
                 let cur=ctx.get_var(arg!(2)).unwrap_or(b"0");
                 ctx.set_var(arg!(2), if cur==b"1"{b"0"}else{b"1"});
