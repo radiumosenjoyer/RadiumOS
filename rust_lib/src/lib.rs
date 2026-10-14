@@ -15635,17 +15635,19 @@ pub fn exec_file(path: &[u8], ctx: &mut ScriptCtx) -> i32 {
         i += 1;
     }
 
-    // Second pass: execute (unless ^entrypoint delegates to main())
+    // Second pass: run top-level statements, then main() if ^entrypoint.
     ctx.include_depth += 1;
+    let setup = exec_block(lines_slice, 0, line_count - 1, ctx);
     let result = if requires_main {
         if ctx.find_func(b"main").is_none() {
             rust_print(b"Error: ^entrypoint but no main() defined\n");
             ctx.include_depth -= 1;
             return -1;
         }
+        let _ = setup;
         call_function(b"main", &[], ctx)
     } else {
-        exec_block(lines_slice, 0, line_count - 1, ctx)
+        setup
     };
     ctx.include_depth -= 1;
     result
