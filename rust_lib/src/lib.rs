@@ -9339,6 +9339,13 @@ impl<T> Vec<T> {
         if capacity == 0 {
             return Vec::new();
         }
+        if core::mem::size_of::<T>() == 0 {
+            return Vec {
+                ptr: core::ptr::NonNull::<T>::dangling().as_ptr(),
+                len: 0,
+                capacity,
+            };
+        }
         
         unsafe {
             let size = capacity * core::mem::size_of::<T>();
@@ -9593,6 +9600,13 @@ impl<T> Vec<T> {
         if new_capacity <= self.capacity {
             return;
         }
+        if core::mem::size_of::<T>() == 0 {
+            if self.ptr.is_null() {
+                self.ptr = core::ptr::NonNull::<T>::dangling().as_ptr();
+            }
+            self.capacity = new_capacity;
+            return;
+        }
         
         unsafe {
             let new_size = new_capacity * core::mem::size_of::<T>();
@@ -9607,6 +9621,8 @@ impl<T> Vec<T> {
             
             if self.len > 0 && !self.ptr.is_null() {
                 core::ptr::copy_nonoverlapping(self.ptr, new_ptr, self.len);
+            }
+            if !self.ptr.is_null() {
                 let old_size = self.capacity * core::mem::size_of::<T>();
                 if old_size > 0 {
                     let old_layout = core::alloc::Layout::from_size_align(old_size, align)
@@ -9657,8 +9673,7 @@ impl<T> Drop for Vec<T> {
                 core::ptr::drop_in_place(self.ptr.add(i));
             }
             
-            // Free memory
-            if !self.ptr.is_null() && self.capacity > 0 {
+            if core::mem::size_of::<T>() != 0 && !self.ptr.is_null() && self.capacity > 0 {
                 let size = self.capacity * core::mem::size_of::<T>();
                 let align = core::mem::align_of::<T>().max(1);
                 if let Ok(layout) = core::alloc::Layout::from_size_align(size, align) {
