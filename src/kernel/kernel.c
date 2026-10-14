@@ -596,6 +596,7 @@ keyboard_await("ATTEMPTING TO CHANGE INTO {80x50[vga-mode]} : press any key to c
        //outb(0x21, inb(0x21) | 0x01); 
     enable_interrupts();
     while (1) {
+        rust_schedule();
         halt();
     }
 }
